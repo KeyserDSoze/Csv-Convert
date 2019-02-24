@@ -21,6 +21,7 @@ namespace Test
                 I = L.A
             };
             string csv = Csv.CsvConvert.Serialize(a);
+            string json = Newtonsoft.Json.JsonConvert.SerializeObject(a);
             a = Csv.CsvConvert.Deserialize<A>(csv);
             Console.WriteLine("end");
             Console.ReadLine();
