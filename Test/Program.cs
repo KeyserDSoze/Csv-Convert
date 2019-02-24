@@ -17,7 +17,8 @@ namespace Test
                     { "key1", new B() { O = "r", C = new C() { U = "uu" } } },
                     { "key2", new B() { O = "t", C = new C() { U = "yy" } } }
                 },
-                Lister = new List<E> { new B() { O = "r", C = new C() { U = "uu" } }, new B() { O = "t", C = new C() { U = "yy" } } }
+                Lister = new List<E> { new B() { O = "r", C = new C() { U = "uu" } }, new B() { O = "t", C = new C() { U = "yy" } } },
+                I = L.A
             };
             string csv = Csv.CsvConvert.Serialize(a);
             a = Csv.CsvConvert.Deserialize<A>(csv);
@@ -31,6 +32,13 @@ namespace Test
             public E B { get; set; }
             public Dictionary<string, E> Dict { get; set; }
             public List<E> Lister { get; set; }
+            public L I { get; set; }
+        }
+        public enum L
+        {
+            A,
+            B,
+            C
         }
         public class B : E
         {

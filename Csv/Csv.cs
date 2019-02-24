@@ -62,7 +62,7 @@ namespace Csv
         private static string ForStringBuilder<T>(T data,  int separatorIndex, string separatorString)
         {
             Type type = typeof(T);
-            if (!type.IsPrimitive && type != typeof(string))
+            if (!type.IsPrimitive && type != typeof(string) && type.BaseType != typeof(Enum))
             {
                 string nameOfInstance = "";
                 if (type.IsAbstract || type.IsInterface) nameOfInstance = "[[" + data.GetType().Name + "]]";
