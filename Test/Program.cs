@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using TestLibrary;
 
 namespace Test
@@ -10,7 +11,13 @@ namespace Test
             A a = new A()
             {
                 B = new B() { O = "O", C = new C() { U = "AA" } },
-                F = "F"
+                F = "F",
+                Dict = new Dictionary<string, E>
+                {
+                    { "key1", new B() { O = "r", C = new C() { U = "uu" } } },
+                    { "key2", new B() { O = "t", C = new C() { U = "yy" } } }
+                },
+                Lister = new List<E> { new B() { O = "r", C = new C() { U = "uu" } }, new B() { O = "t", C = new C() { U = "yy" } } }
             };
             string csv = Csv.CsvConvert.Serialize(a);
             a = Csv.CsvConvert.Deserialize<A>(csv);
@@ -22,6 +29,8 @@ namespace Test
         {
             public string F { get; set; }
             public E B { get; set; }
+            public Dictionary<string, E> Dict { get; set; }
+            public List<E> Lister { get; set; }
         }
         public class B : E
         {
