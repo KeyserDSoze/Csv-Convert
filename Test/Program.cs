@@ -16,6 +16,7 @@ namespace Test
             a = Csv.CsvConvert.Deserialize<A>(csv);
             Console.WriteLine("end");
             Console.ReadLine();
+            Console.ReadLine();
         }
         public class A
         {
