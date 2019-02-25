@@ -87,8 +87,31 @@ namespace Csv
         private static bool IsPrimitive(ref Type type)
         {
             if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Nullable<>) && type.GenericTypeArguments.Length > 0) type = type.GenericTypeArguments.FirstOrDefault();
-            return type.IsPrimitive || type == typeof(string) || type.BaseType == typeof(Enum) || type == typeof(decimal);
+            return CheckPrimitiveList(type) || type.BaseType == typeof(Enum);
         }
+        private static bool CheckPrimitiveList(Type typeR)
+        {
+            foreach (Type type in NormalTypes)
+                if (type == typeR) return true;
+            return false;
+        }
+        private static readonly List<Type> NormalTypes = new List<Type>
+        {
+            typeof(int),
+            typeof(bool),
+            typeof(char),
+            typeof(decimal),
+            typeof(double),
+            typeof(long),
+            typeof(byte),
+            typeof(sbyte),
+            typeof(float),
+            typeof(uint),
+            typeof(ulong),
+            typeof(short),
+            typeof(ushort),
+            typeof(string)
+        };
         public static T Deserialize<T>(string data, int separatorIndex = 0)
         {
             if (string.IsNullOrWhiteSpace(data)) return default(T);
@@ -114,51 +137,34 @@ namespace Csv
                     try
                     {
                         Type propertyType = propertyInfo[i].PropertyType;
-                        if (!IsPrimitive(ref propertyType))
+                        if (IDictionaryType.IsAssignableFrom(propertyType))
                         {
-                            if (IDictionaryType.IsAssignableFrom(propertyInfo[i].PropertyType))
+                            IDictionary dictionary = (IDictionary)Activator.CreateInstance(propertyType);
+                            Type[] types = propertyType.GetGenericArguments();
+                            foreach (string s in splittedData[counter].Split(SeparatorForList))
                             {
-                                IDictionary dictionary = (IDictionary)Activator.CreateInstance(propertyInfo[i].PropertyType);
-                                Type[] types = propertyInfo[i].PropertyType.GetGenericArguments();
-                                foreach (string s in splittedData[counter].Split(SeparatorForList))
-                                {
-                                    string[] dictionaryEntry = s.Split(SeparatorForDictionary);
-                                    object key = typeof(CsvConvert).GetMethod("Deserialize").MakeGenericMethod(types[0]).Invoke(null, new object[2] { dictionaryEntry[0], separatorIndex + 1 });
-                                    object value = typeof(CsvConvert).GetMethod("Deserialize").MakeGenericMethod(types[1]).Invoke(null, new object[2] { dictionaryEntry[1], separatorIndex + 1 });
-                                    dictionary.Add(key, value);
-                                }
-                                propertyInfo[i].SetValue(entity, dictionary);
+                                string[] dictionaryEntry = s.Split(SeparatorForDictionary);
+                                object key = typeof(CsvConvert).GetMethod("ForStringParsing", BindingFlags.Static | BindingFlags.NonPublic).MakeGenericMethod(types[0]).Invoke(null, new object[2] { dictionaryEntry[0], separatorIndex });
+                                object value = typeof(CsvConvert).GetMethod("ForStringParsing", BindingFlags.Static | BindingFlags.NonPublic).MakeGenericMethod(types[0]).Invoke(null, new object[2] { dictionaryEntry[1], separatorIndex });
+                                dictionary.Add(key, value);
                             }
-                            else if (IListType.IsAssignableFrom(propertyInfo[i].PropertyType))
-                            {
-                                IList list = (IList)Activator.CreateInstance(propertyInfo[i].PropertyType);
-                                Type[] types = propertyInfo[i].PropertyType.GetGenericArguments();
-                                foreach (string s in splittedData[counter].Split(SeparatorForList))
-                                {
-                                    object value = typeof(CsvConvert).GetMethod("Deserialize").MakeGenericMethod(types[0]).Invoke(null, new object[2] { s, separatorIndex + 1 });
-                                    list.Add(value);
-                                }
-                                propertyInfo[i].SetValue(entity, list);
-                            }
-                            else
-                            {
-                                object returnedObject = typeof(CsvConvert).GetMethod("Deserialize").MakeGenericMethod(propertyInfo[i].PropertyType).Invoke(null, new object[2] { splittedData[counter], separatorIndex + 1 });
-                                propertyInfo[i].SetValue(entity, returnedObject);
-                            }
+                            propertyInfo[i].SetValue(entity, dictionary);
                         }
-                        else if (propertyInfo[i].PropertyType.BaseType != typeof(Enum))
+                        else if (IListType.IsAssignableFrom(propertyType))
                         {
-                            propertyInfo[i].SetValue(entity,
-                            !string.IsNullOrWhiteSpace(splittedData[counter]) ?
-                                (propertyInfo[i].PropertyType.GenericTypeArguments.Length == 0 ?
-                                    Convert.ChangeType(splittedData[counter], propertyInfo[i].PropertyType, CultureInfo.InvariantCulture) :
-                                    Convert.ChangeType(splittedData[counter], propertyInfo[i].PropertyType.GenericTypeArguments[0], CultureInfo.InvariantCulture)
-                                )
-                                : null);
+                            IList list = (IList)Activator.CreateInstance(propertyType);
+                            Type[] types = propertyType.GetGenericArguments();
+                            foreach (string s in splittedData[counter].Split(SeparatorForList))
+                            {
+                                object value = typeof(CsvConvert).GetMethod("ForStringParsing", BindingFlags.Static | BindingFlags.NonPublic).MakeGenericMethod(types[0]).Invoke(null, new object[2] { s, separatorIndex });
+                                list.Add(value);
+                            }
+                            propertyInfo[i].SetValue(entity, list);
                         }
                         else
                         {
-                            propertyInfo[i].SetValue(entity, Enum.Parse(propertyInfo[i].PropertyType, splittedData[counter]));
+                            object returnedObject = typeof(CsvConvert).GetMethod("ForStringParsing", BindingFlags.Static | BindingFlags.NonPublic).MakeGenericMethod(propertyType).Invoke(null, new object[2] { splittedData[counter], separatorIndex });
+                            propertyInfo[i].SetValue(entity, returnedObject);
                         }
                     }
                     catch (Exception er)
@@ -169,6 +175,27 @@ namespace Csv
                 }
             }
             return entity;
+        }
+        private static T ForStringParsing<T>(string data, int separatorIndex)
+        {
+            Type propertyType = typeof(T);
+            if (!IsPrimitive(ref propertyType))
+            {
+                return (T)typeof(CsvConvert).GetMethod("Deserialize").MakeGenericMethod(propertyType).Invoke(null, new object[2] { data, separatorIndex + 1 });
+            }
+            else if (propertyType.BaseType != typeof(Enum))
+            {
+                return (T)(!string.IsNullOrWhiteSpace(data) ?
+                    (propertyType.GenericTypeArguments.Length == 0 ?
+                        Convert.ChangeType(data, propertyType, CultureInfo.InvariantCulture) :
+                        Convert.ChangeType(data, propertyType.GenericTypeArguments[0], CultureInfo.InvariantCulture)
+                    )
+                    : default(T));
+            }
+            else
+            {
+                return (T)Enum.Parse(propertyType, data);
+            }
         }
     }
     public class CsvIgnore : Attribute

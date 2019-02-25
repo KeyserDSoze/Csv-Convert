@@ -12,7 +12,7 @@ namespace Test
             {
                 //B = new B() { O = "O", C = new C() { U = "AA" } },
                 F = 4,
-                T = new List<decimal> { 3M, 2M }
+                T = new List<decimal> { 3.02M, 2.06M }
                 //Dict = new Dictionary<string, E>
                 //{
                 //    { "key1", new B() { O = "r", C = new C() { U = "uu" } } },
