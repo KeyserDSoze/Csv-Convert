@@ -17,6 +17,9 @@ namespace Csv
         private static readonly char SeparatorForDictionary = '¶';
         private static readonly char SeparatorForName = '─';
         private static readonly List<Type> Types = AppDomain.CurrentDomain.GetAssemblies().ToList().FindAll(x => !x.FullName.ToLower().Contains("system")).SelectMany(x => x.GetTypes()).ToList();
+        private static readonly Type Ignore = typeof(CsvIgnore);
+        private static readonly Type IListType = typeof(IList);
+        private static readonly Type IDictionaryType = typeof(IDictionary);
         public static string Serialize<T>(T data, int separatorIndex = 0)
         {
             if (data == null) return string.Empty;
@@ -24,7 +27,7 @@ namespace Csv
             StringBuilder stringBuilder = new StringBuilder();
             foreach (PropertyInfo propertyInfo in data.GetType().GetProperties())
             {
-                if (propertyInfo.GetCustomAttribute(typeof(CsvIgnore)) == null)
+                if (propertyInfo.GetCustomAttribute(Ignore) == null)
                 {
                     object value = propertyInfo.GetValue(data);
                     if (value is IDictionary)
@@ -64,11 +67,16 @@ namespace Csv
         }
         private static string ForStringBuilder<T>(T data, int separatorIndex, string separatorString)
         {
+            if (data == null) return separatorString;
             Type type = typeof(T);
-            if(!IsPrimitive(ref type))
+            if (!IsPrimitive(ref type))
             {
                 string nameOfInstance = "";
-                if (type.IsAbstract || type.IsInterface) nameOfInstance = $"{SeparatorForName}{data.GetType().Name}{SeparatorForName}";
+                if (type.IsAbstract || type.IsInterface)
+                {
+                    type = data.GetType();
+                    nameOfInstance = $"{SeparatorForName}{type.Name}{SeparatorForName}";
+                }
                 return $"{nameOfInstance}{Serialize(data, separatorIndex + 1)}{separatorString}";
             }
             else
@@ -78,7 +86,7 @@ namespace Csv
         }
         private static bool IsPrimitive(ref Type type)
         {
-            if (type.GenericTypeArguments.Length > 0) type = type.GenericTypeArguments.FirstOrDefault();
+            if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Nullable<>) && type.GenericTypeArguments.Length > 0) type = type.GenericTypeArguments.FirstOrDefault();
             return type.IsPrimitive || type == typeof(string) || type.BaseType == typeof(Enum) || type == typeof(decimal);
         }
         public static T Deserialize<T>(string data, int separatorIndex = 0)
@@ -101,13 +109,14 @@ namespace Csv
             int counter = 0;
             for (int i = 0; i < propertyInfo.Length; i++)
             {
-                if (propertyInfo[i].GetCustomAttribute(typeof(CsvIgnore)) == null)
+                if (propertyInfo[i].GetCustomAttribute(Ignore) == null)
                 {
                     try
                     {
-                        if (!propertyInfo[i].PropertyType.IsPrimitive && propertyInfo[i].PropertyType != typeof(string))
+                        Type propertyType = propertyInfo[i].PropertyType;
+                        if (!IsPrimitive(ref propertyType))
                         {
-                            if (splittedData[counter].Contains(SeparatorForDictionary))
+                            if (IDictionaryType.IsAssignableFrom(propertyInfo[i].PropertyType))
                             {
                                 IDictionary dictionary = (IDictionary)Activator.CreateInstance(propertyInfo[i].PropertyType);
                                 Type[] types = propertyInfo[i].PropertyType.GetGenericArguments();
@@ -120,7 +129,7 @@ namespace Csv
                                 }
                                 propertyInfo[i].SetValue(entity, dictionary);
                             }
-                            else if (splittedData[counter].Contains(SeparatorForList))
+                            else if (IListType.IsAssignableFrom(propertyInfo[i].PropertyType))
                             {
                                 IList list = (IList)Activator.CreateInstance(propertyInfo[i].PropertyType);
                                 Type[] types = propertyInfo[i].PropertyType.GetGenericArguments();
