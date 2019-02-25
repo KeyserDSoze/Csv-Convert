@@ -17,7 +17,8 @@ namespace Test
                     { "key1", new B() { O = "r", C = new C() { U = "uu" } } },
                     { "key2", new B() { O = "t", C = new C() { U = "yy" } } }
                 },
-                Lister = new List<E> { new B() { O = "r", C = new C() { U = "uu" } }, new B() { O = "t", C = new C() { U = "yy" } } },
+                //Lister = new List<E> { new B() { O = "r", C = new C() { U = "uu" } }, new B() { O = "t", C = new C() { U = "yy" } } },
+                Lister = new List<E>(),
                 I = L.A,
                 Value = null,
                 G = new G() { J = 3, K = 5 }

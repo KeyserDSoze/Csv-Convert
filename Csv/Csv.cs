@@ -36,7 +36,8 @@ namespace Csv
                             string stringedValue = typeof(CsvConvert).GetMethod("ForStringBuilder", BindingFlags.Static | BindingFlags.NonPublic).MakeGenericMethod(types[1]).Invoke(null, new object[3] { single.Value, separatorIndex, SeparatorForList[1].ToString() }).ToString();
                             internalStringBuilder.Append($"{stringedKey}{stringedValue}");
                         }
-                        stringBuilder.Append($"{internalStringBuilder.ToString().Substring(0, internalStringBuilder.Length - 1)}{separator}");
+                        string internalString = internalStringBuilder.ToString();
+                        stringBuilder.Append($"{(internalString.Length == 0 ? internalString : internalString.Substring(0, internalStringBuilder.Length - 1))}{separator}");
                     }
                     else if (value is IList)
                     {
@@ -47,7 +48,8 @@ namespace Csv
                             string stringedValue = typeof(CsvConvert).GetMethod("ForStringBuilder", BindingFlags.Static | BindingFlags.NonPublic).MakeGenericMethod(types[0]).Invoke(null, new object[3] { single, separatorIndex, SeparatorForList[0].ToString() }).ToString();
                             internalStringBuilder.Append($"{stringedValue}");
                         }
-                        stringBuilder.Append($"{internalStringBuilder.ToString().Substring(0, internalStringBuilder.Length - 1)}{separator}");
+                        string internalString = internalStringBuilder.ToString();
+                        stringBuilder.Append($"{(internalString.Length == 0 ? internalString : internalString.Substring(0, internalStringBuilder.Length - 1))}{separator}");
                     }
                     else
                     {
